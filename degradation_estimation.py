@@ -37,7 +37,7 @@ fig = plt.figure(figsize=(5, 4), dpi=100)
 ax1 = fig.add_subplot(111)
 
 temperature = 21
-chemistry = 'NMC'
+chemistry = 'LMO'
 alpha_sei = 5.87e-02
 beta_sei = 1.06e+02
 
@@ -57,7 +57,7 @@ for m, fn in enumerate(os.listdir('input_data/')):
             diff = last_time - first_time
             total_duration = diff.total_seconds()
 
-            time_linspace = even_selection_array(365, dtm)  # selection 100 time points from dtm
+            time_linspace = even_selection_array(100, dtm)  # selection 100 time points from dtm
 
             cal_results = [0]
             cyc_results = [0]
@@ -77,7 +77,7 @@ for m, fn in enumerate(os.listdir('input_data/')):
                 time_v = convert_vector_time(time_v)
 
                 # extracts the relevant soc data
-                soc_v = soc.iloc[time_index_v[k-1]:time_index_v[k]].as_matrix()
+                soc_v = soc.iloc[time_index_v[k-1]:time_index_v[k]].values
 
                 # calculate calendar and cycling degradation
                 cal_deg, cyc_deg = final_degradation_model(time_v=time_v,
@@ -112,4 +112,8 @@ for m, fn in enumerate(os.listdir('input_data/')):
             plt.legend()
             plt.tight_layout()
             plt.draw()
+
+            write_out = pd.DataFrame(time_linspace, columns=['time'])
+            write_out['Capacity_left'] = remaining_capa
+            write_out.to_csv(f'.\Results\{filename}.csv')
 plt.show()

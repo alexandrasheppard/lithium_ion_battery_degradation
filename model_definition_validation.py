@@ -43,7 +43,7 @@ print("******** MODEL PARAMETERS ********")
 # ----------------- Part 1a: SEI fit of the non linear degradation model ------
 
 # -- SEI fit --------------------------------------------------------
-data_file_path = 'degradation_model/data/cycling_degradation/cyc_test_data.csv'
+data_file_path = './degradation_model/data/cycling_degradation/cyc_test_data.csv'
 SEI_fit1 = SEI_fit(data_file_path)
 
 # -- Plot --------------------------
@@ -59,7 +59,7 @@ beta_sei = 1.06e+02
 # ----------------- Part 1b: Stress factor outside of standard conditions ------
 
 # -- Temperature stress model fit -------------------------------------
-data_file_path = 'degradation_model/data/calendar_degradation/calend_deg_at_50_SoC.csv'
+data_file_path = './degradation_model/data/calendar_degradation/calend_deg_at_50_SoC.csv'
 TempStressModelFit1 = TempStressModelFit(data_file_path,
                                          alpha_sei=alpha_sei,
                                          beta_sei=beta_sei)
@@ -73,7 +73,7 @@ TempStressModelFit1.plot_model(ax)
 
 
 # -- State of Charge stress model fit ---------------------------------
-data_file_path = 'degradation_model/data/calendar_degradation/calend_deg_at_25_deg.csv'
+data_file_path = './degradation_model/data/calendar_degradation/calend_deg_at_25_deg.csv'
 SoCStressModelFit1 = SoCStressModelFit(data_file_path,
                                        alpha_sei=alpha_sei,
                                        beta_sei=beta_sei)
@@ -102,16 +102,16 @@ ax.plot(soc_linspace, voltage_stress_model, 'b')
 # ----------------- Part 1c: Degradation model under standard conditions -------
 
 # -- Time degradation model fit ---------------------------------------
-data_file_path = 'degradation_model/data/calendar_degradation/calend_deg_at_25_deg.csv'
+data_file_path = './degradation_model/data/calendar_degradation/calend_deg_at_25_deg.csv'
 TimeDegModelFit1 = TimeDegModelFit(data_file_path,
                                    alpha_sei=alpha_sei,
                                    beta_sei=beta_sei)
 
 
 # -- Depth of Discharge degradation model fit -------------------------
-data_file_paths = ['degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_NMC.csv',
-                   'degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_LMO.csv',
-                   'degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_LFP.csv']
+data_file_paths = ['./degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_NMC.csv',
+                   './degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_LMO.csv',
+                   './degradation_model/data/cycling_degradation/cycle_nb_at_80_SoH_LFP.csv']
 CyclingDegModelFit1 = CyclingDegModelFit(data_file_paths)
 
 # -- Plot -------------------------------
@@ -149,7 +149,7 @@ v_soc_max = [100, 100, 85, 100, 75, 75, 75]
 
 fig = plt.figure(figsize=(9, 4), dpi=100)
 ax1 = fig.add_subplot(121)
-plot_DST_experimental_data(ax1, data_folder_path='degradation_model/data/DST_cycles/')
+plot_DST_experimental_data(ax1, data_folder_path='./degradation_model/data/DST_cycles/')
 
 for i in range(0, len(v_soc_max)):
     ax2 = fig.add_subplot(122)

@@ -195,7 +195,7 @@ def time_deg_model(t, k_t=4.11e-10):
 def voltage_stress_model(soc, k_v=10.2):
 
     soc_threshold = 0.85
-    if not isinstance(soc, collections.Iterable):
+    if not isinstance(soc, collections.abc.Iterable):
         if soc > soc_threshold:
             stress = np.exp(k_v * (soc - soc_threshold))
         else:
@@ -220,7 +220,7 @@ def soc_stress_model(soc, k_soc=1.01e+00, s_ref=0.5):
     """
 
     # model type 1 -------------------------------------------------------------------
-    if not isinstance(soc, collections.Iterable):
+    if not isinstance(soc, collections.abc.Iterable):
             stress = np.exp(k_soc * (soc - s_ref))
     else:
         stress = []
@@ -255,7 +255,7 @@ def temp_stress_model(T, k_T=6.71e-02, T_ref=25):
     :param T_ref: reference temperature, usually around 25°C
     :return: stress between 0 and 1; stress = 1 under reference conditions
     """
-    if not isinstance(T, collections.Iterable):
+    if not isinstance(T, collections.abc.Iterable):
         if T >= T_ref:
             stress = (np.exp(k_T * (T - T_ref)))
         elif T > T_ref - 10:
@@ -275,7 +275,9 @@ def temp_stress_model(T, k_T=6.71e-02, T_ref=25):
 
 
 def final_degradation_model(time_v, soc_v, T, time, chemistry, delta=0.1, title=''):
-
+    
+    print('In:final deg model, time_v and soc_v')
+    print(time_v, soc_v)
     # cycles counting
     cycle_count1 = CycleCounter(time_v=time_v, soc_v=soc_v, delta=delta, title=title)
 
