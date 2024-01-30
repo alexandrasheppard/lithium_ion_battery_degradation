@@ -44,76 +44,84 @@ beta_sei = 1.06e+02
 for m, fn in enumerate(os.listdir('input_data/')):
     if os.path.isfile(os.path.join('input_data/', str(fn))):
         filename, file_extension = os.path.splitext(fn)
+        print(f'Working with file {filename}')
         if file_extension == '.csv':
+            # If lasted al the way down to............
+
             # file processing
             df = pd.read_csv('input_data/' + fn, parse_dates=[0])
-            dtm = df.iloc[:, 0]  # date time
-            soc = df.iloc[:, 1]  # state of charge
+        else:
+            df = pd.read_pickle('input_data/' + fn) #, parse_dates=[0])
+            # df = pd.DataFrame(series).reset_index()
 
-            # calculation of total duration
-            last_index = dtm.index[-1]
-            first_time = dtm[1]
-            last_time = dtm[last_index]
-            diff = last_time - first_time
-            total_duration = diff.total_seconds()
+        dtm = df.iloc[:, 0]  # date time
+        soc = df.iloc[:, 1]  # state of charge
 
-            time_linspace = even_selection_array(100, dtm)  # selection 100 time points from dtm
+        # calculation of total duration
+        last_index = dtm.index[-1]
+        first_time = dtm[1]
+        last_time = dtm[last_index]
+        diff = last_time - first_time
+        total_duration = diff.total_seconds()
 
-            cal_results = [0]
-            cyc_results = [0]
-            linearised_deg_v = [0]
-            nonlinear_deg_v = [0]
-            time_index_v = [0]
+        time_linspace = even_selection_array(100, dtm)  # selection 100 time points from dtm
 
-            for k in range(1, len(time_linspace)):
+        cal_results = [0]
+        cyc_results = [0]
+        linearised_deg_v = [0]
+        nonlinear_deg_v = [0]
+        time_index_v = [0]
 
-                # searches in dtm the index at which the date is equal to time_linspace[i]
-                index_dtm_i = dtm[dtm == time_linspace[k]].index.tolist()[0]
-                time_index_v.append(index_dtm_i)
+        for k in range(1, len(time_linspace)):
 
-                # extracts the relevant time data
-                time_v = dtm.iloc[time_index_v[k-1]:time_index_v[k]]
-                # and converts them to time difference
-                time_v = convert_vector_time(time_v)
+            # searches in dtm the index at which the date is equal to time_linspace[i]
+            index_dtm_i = dtm[dtm == time_linspace[k]].index.tolist()[0]
+            time_index_v.append(index_dtm_i)
 
-                # extracts the relevant soc data
-                soc_v = soc.iloc[time_index_v[k-1]:time_index_v[k]].values
+            # extracts the relevant time data
+            time_v = dtm.iloc[time_index_v[k-1]:time_index_v[k]]
+            # and converts them to time difference
+            time_v = convert_vector_time(time_v)
 
-                # calculate calendar and cycling degradation
-                cal_deg, cyc_deg = final_degradation_model(time_v=time_v,
-                                                           soc_v=soc_v,
-                                                           T=temperature,
-                                                           time=time_v[-1],
-                                                           chemistry=chemistry,
-                                                           delta=0.1,
-                                                           title='DST')
+            # extracts the relevant soc data
+            soc_v = soc.iloc[time_index_v[k-1]:time_index_v[k]].values
 
-                # stores the results
-                cal_results.append(cal_results[k-1] + cal_deg)
-                cyc_results.append(cyc_results[k-1] + cyc_deg)
+            # calculate calendar and cycling degradation
+            cal_deg, cyc_deg = final_degradation_model(time_v=time_v,
+                                                       soc_v=soc_v,
+                                                       T=temperature,
+                                                       time=time_v[-1],
+                                                       chemistry=chemistry,
+                                                       delta=0.1,
+                                                       title='DST')
 
-                linearised_deg = cal_results[k]+cyc_results[k]
-                linearised_deg_v.append(linearised_deg)
+            # stores the results
+            cal_results.append(cal_results[k-1] + cal_deg)
+            cyc_results.append(cyc_results[k-1] + cyc_deg)
 
-                non_linear_deg = nonlinear_general_model(alpha_sei, beta_sei, linearised_deg)
+            linearised_deg = cal_results[k]+cyc_results[k]
+            linearised_deg_v.append(linearised_deg)
 
-                nonlinear_deg_v.append(non_linear_deg)
+            non_linear_deg = nonlinear_general_model(alpha_sei, beta_sei, linearised_deg)
 
-            remaining_capa = []
+            nonlinear_deg_v.append(non_linear_deg)
 
-            for i in range(0, len(nonlinear_deg_v)):
-                remaining_capa.append(100*(1-nonlinear_deg_v[i]))
+        remaining_capa = []
 
-            ax1.plot(time_linspace, remaining_capa, 'x-', color=colors[m], label=filename)
-            ax1.set_xlabel('Time')
-            ax1.set_ylabel('Remaining capacity [%]')
-            ax1.set_ylim([80, 100])
+        for i in range(0, len(nonlinear_deg_v)):
+            remaining_capa.append(100*(1-nonlinear_deg_v[i]))
 
-            plt.legend()
-            plt.tight_layout()
-            plt.draw()
+        ax1.plot(time_linspace, remaining_capa, 'x-', label=filename) #color=colors[m],
+        ax1.set_xlabel('Time')
+        ax1.set_ylabel('Remaining capacity [%]')
+        ax1.set_ylim([80, 100])
 
-            write_out = pd.DataFrame(time_linspace, columns=['time'])
-            write_out['Capacity_left'] = remaining_capa
-            write_out.to_csv(f'.\Results\{filename}.csv')
+        plt.legend()
+        plt.tight_layout()
+        plt.draw()
+
+        write_out = pd.DataFrame(time_linspace, columns=['time'])
+        write_out['Capacity_left'] = remaining_capa
+        write_out.to_csv(f'.\Results\{filename}.csv')
+
 plt.show()
