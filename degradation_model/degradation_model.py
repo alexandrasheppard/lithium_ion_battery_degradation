@@ -276,8 +276,8 @@ def temp_stress_model(T, k_T=6.71e-02, T_ref=25):
 
 def final_degradation_model(time_v, soc_v, T, time, chemistry, delta=0.1, title=''):
     
-    print('In:final deg model, time_v and soc_v')
-    print(time_v, soc_v)
+    # print('In:final deg model, time_v and soc_v')
+    # print(time_v, soc_v)
     # cycles counting
     cycle_count1 = CycleCounter(time_v=time_v, soc_v=soc_v, delta=delta, title=title)
 

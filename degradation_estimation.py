@@ -8,7 +8,6 @@ import time
 
 from degradation_model.degradation_model import final_degradation_model, nonlinear_general_model
 
-
 colors = ['red', 'blue', 'green', 'orange', 'purple', 'black', 'grey', 'brown']
 
 
@@ -99,7 +98,8 @@ for m, fn in enumerate(os.listdir('input_data/')):
             cal_results.append(cal_results[k-1] + cal_deg)
             cyc_results.append(cyc_results[k-1] + cyc_deg)
 
-            linearised_deg = cal_results[k]+cyc_results[k]
+            # calculates the linearised and non-linear degradation
+            linearised_deg = cal_results[k] + cyc_results[k]
             linearised_deg_v.append(linearised_deg)
 
             non_linear_deg = nonlinear_general_model(alpha_sei, beta_sei, linearised_deg)
@@ -122,6 +122,6 @@ for m, fn in enumerate(os.listdir('input_data/')):
 
         write_out = pd.DataFrame(time_linspace, columns=['time'])
         write_out['Capacity_left'] = remaining_capa
-        write_out.to_csv(f'.\Results\{filename}.csv')
+        write_out.to_csv(f'.\Results\{fn}.csv')
 
 plt.show()

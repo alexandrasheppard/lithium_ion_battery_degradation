@@ -70,7 +70,6 @@ def peakdet(v, delta, x=None):
                 mx = this
                 mxpos = x[i]
                 lookformax = True
-
     return array(maxtab), array(mintab)
 
 
@@ -80,7 +79,7 @@ if __name__ == "__main__":
 
     series = [0, 0, 0, 2, 0, 0, 0, -2, 0, 0, 0, 2, 0, 0, 0, -2, 0]
 
-    maxtab, mintab = peakdet(series, .001)
+    maxtab, mintab = peakdet(series, 0.001)
     plot(series)
     scatter(array(maxtab)[:, 0], array(maxtab)[:, 1], color='blue')
     scatter(array(mintab)[:, 0], array(mintab)[:, 1], color='red')
