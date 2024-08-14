@@ -37,8 +37,8 @@ ax1 = fig.add_subplot(111)
 
 temperature = 21
 chemistry = 'LMO'
-alpha_sei = 5.87e-02
-beta_sei = 1.06e+02
+alpha_sei = 5.75e-02 # 5.87e-02
+beta_sei = 1.21e+02 # 1.06e+02
 
 for m, fn in enumerate(os.listdir('input_data/')):
     if os.path.isfile(os.path.join('input_data/', str(fn))):
@@ -51,10 +51,10 @@ for m, fn in enumerate(os.listdir('input_data/')):
             df = pd.read_csv('input_data/' + fn, parse_dates=[0])
         else:
             df = pd.read_pickle('input_data/' + fn) #, parse_dates=[0])
-            # df = pd.DataFrame(series).reset_index()
+            # df = pd.DataFrame(import_series).reset_index()
 
         dtm = df.iloc[:, 0]  # date time
-        soc = df.iloc[:, 1]  # state of charge
+        soc = df.iloc[:, 1]*100  # state of charge *!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         # calculation of total duration
         last_index = dtm.index[-1]
@@ -99,12 +99,14 @@ for m, fn in enumerate(os.listdir('input_data/')):
             cyc_results.append(cyc_results[k-1] + cyc_deg)
 
             # calculates the linearised and non-linear degradation
-            linearised_deg = cal_results[k] + cyc_results[k]
+            linearised_deg =  cal_results[k] + cyc_results[k]                    # Original
+            # linearised_deg = cal_results[k]*0             # Waterfall chart, delete later
             linearised_deg_v.append(linearised_deg)
 
             non_linear_deg = nonlinear_general_model(alpha_sei, beta_sei, linearised_deg)
 
-            nonlinear_deg_v.append(non_linear_deg)
+            nonlinear_deg_v.append(non_linear_deg)                 # Original
+            # nonlinear_deg_v.append(linearised_deg)               # Waterfall chart, delete later
 
         remaining_capa = []
 
@@ -114,7 +116,7 @@ for m, fn in enumerate(os.listdir('input_data/')):
         ax1.plot(time_linspace, remaining_capa, 'x-', label=filename) #color=colors[m],
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Remaining capacity [%]')
-        ax1.set_ylim([80, 100])
+        # ax1.set_ylim([40, 100])
 
         plt.legend()
         plt.tight_layout()
@@ -122,6 +124,8 @@ for m, fn in enumerate(os.listdir('input_data/')):
 
         write_out = pd.DataFrame(time_linspace, columns=['time'])
         write_out['Capacity_left'] = remaining_capa
-        write_out.to_csv(f'.\Results\{fn}.csv')
+        # write_out.to_csv(f'.\Results\{fn}.csv')           # Original
+        write_out.to_csv(f'.\Results\\{fn}.csv')
+
 
 plt.show()
