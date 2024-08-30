@@ -284,6 +284,7 @@ def final_degradation_model(time_v, soc_v, T, time, chemistry, delta=0.1, title=
     cycle_count1.rainflow_process()
 
     soc_mean = cycle_count1.mean_soc
+    # print(cycle_count1.mean_soc)
     arr_dod = cycle_count1.arr_dod
     arr_n = cycle_count1.arr_n
     arr_soc_mean = cycle_count1.arr_soc_mean

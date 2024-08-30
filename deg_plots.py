@@ -10,16 +10,19 @@ import rainflow
 import matplotlib.dates as mdates
 import datetime
 from datetime import date, datetime
+from dateutil import relativedelta
 
 # Location of input files
 # results_folder = r'M:\Documents\PhD\Code\PhD_Projects\IFE_degradation\Results\July_prelim_v1'
 results_folder = r'M:\Documents\PhD\Code\PhD_Projects\IFE_degradation\Results\20240806140146\Matric_filling_july_10'
 deg_results_folder = r'Deg_model_results'
 opt_results_folder = r'Opt_model_results'
+start_date = datetime.strptime('2016-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+lifetime_percent = 80
 # Naming system for degradation results files
 pattern = re.compile(r'(\d+.?\d*)MWh_(\d+.?\d*)MW_(\d+T)_(\d+.\d+)_SOC.csv')
 
-size_time_deg_heatmap = False
+size_time_deg_heatmap = True
 battery_plots = False
 plot_cycle_data = False
 SOC_limits_calculate = False
@@ -29,12 +32,14 @@ SOC_count_limits = {'lower':0.2,
                     'upper':0.8}
 
 # for plotting P vs E heatmaps for several factors
-factors_op = []
-# factors_deg = []
-# factors_op = ['Remaining cap', 'Average SOC', 'Total battery discharge', 'Energy not served']
-factors_deg = ['Remaining cap', 'Average SOC', 'Average DOD', 'Number of cycles', 'Total battery discharge']
+# factors = []
+factors = ['Remaining cap', 'Average SOC', 'Average DOD', 'Number of cycles', 'Total battery discharge', 'Lifetime']
+            #'Total battery discharge', 'Energy not served',
+desired_heatmaps = {'E':{'x':'Storage duration', 'y':'Time resolution'},
+                    'Storage duration':{'x':'E', 'y':'Time resolution'},
+                    'Time resolution':{'x':'E', 'y':'Storage duration'}}
 if SOC_limits_calculate:
-    factors_deg.extend([f'SOC gt {SOC_count_limits['upper']}', f'SOC lt {SOC_count_limits['lower']}'])
+    factors.extend([f'SOC gt {SOC_count_limits['upper']}', f'SOC lt {SOC_count_limits['lower']}'])
 colours = {'Remaining cap':'rocket',
            'Average SOC':'Greens',
            'Average DOD':'Blues',
@@ -42,7 +47,8 @@ colours = {'Remaining cap':'rocket',
            'Number of cycles':'YlOrBr',
            'Total battery discharge':'Purples',
            f'SOC gt {SOC_count_limits['upper']}':'Greys',
-           f'SOC lt {SOC_count_limits['lower']}': 'Greys'}
+           f'SOC lt {SOC_count_limits['lower']}': 'Greys',
+           'Lifetime': 'Oranges'}
 colour = {'Remaining cap':'C5',
            'Average SOC':'C2',
            'Average DOD':'C0',
@@ -52,16 +58,7 @@ colour = {'Remaining cap':'C5',
            f'SOC gt {SOC_count_limits['upper']}':'C7',
            f'SOC lt {SOC_count_limits['lower']}': 'black'}
 
-
-# plotting = True
-# SOC_plots = True
-# Cycles_plots = 1
-# battery_plots = True
-# AC_to_DC = '1.1'
-
-
-
-def set_up(results_folder, deg_results_folder, opt_results_folder, pattern):
+def set_up(results_folder, deg_results_folder, opt_results_folder, pattern, lifetime_percent=80):
     deg_dir = os.path.join(results_folder, deg_results_folder)
     opt_dir = os.path.join(results_folder, opt_results_folder)
     time_labels = {'1T': '1 min', '5T': '5 min', '15T': '15 min', '30T': '30 min'}
@@ -78,7 +75,7 @@ def set_up(results_folder, deg_results_folder, opt_results_folder, pattern):
                 # Degradation results
                 deg_res = pd.read_csv(os.path.join(deg_dir, fn), index_col='time', usecols=['time', 'Capacity_left'])
                 remaining_cap = deg_res['Capacity_left'].iloc[-1]
-                date_of_lt_80 = deg_res[deg_res['Capacity_left']<80]['Capacity_left'].index[0]
+                date_of_lifetime = deg_res[deg_res['Capacity_left']<lifetime_percent]['Capacity_left'].index[0]
                 match = pattern.match(fn)
                 E = match.group(1)
                 P = match.group(2)
@@ -104,7 +101,7 @@ def set_up(results_folder, deg_results_folder, opt_results_folder, pattern):
                         'Time labels': time_labels[T],
                         'Time granularity': time_grans[T],
                         'Remaining cap': remaining_cap,
-                        'Date of lt 80': date_of_lt_80,
+                        'Date of lifetime': date_of_lifetime,
                         'Energy not served': imbalance,
                         'Average SOC': opt_res.SOC.mean(),
                         'Total battery discharge': total_battery_delivered
@@ -114,13 +111,22 @@ def set_up(results_folder, deg_results_folder, opt_results_folder, pattern):
     batt_df = pd.DataFrame(batteries)
     batt_df['Size labels'] = list(zip(batt_df['Energy capacity'], batt_df['Power capacity']))
     batt_df['Case labels'] = list(zip(batt_df['Energy capacity'], batt_df['Power capacity'], batt_df['Time resolution']))
-    c_rate_names = {0.5:'C/2', 1:'1C', 2:'2C', 4:'4C'}
-    batt_df['C-rate'] = batt_df['P'] / batt_df['E']
+    s_dur_names = {0.5:'2 h', 1:'1 h', 2:'0.5 h', 4:'0.25 h'}
+    batt_df['Storage duration'] = batt_df['P'] / batt_df['E']
     for i in range(len(batt_df)):
-        batt_df.loc[i, 'C-rate_name'] = c_rate_names[batt_df.loc[i, 'C-rate']]
-    batt_df = batt_df.sort_values(by=['E', 'C-rate', 'Time resolution'], ascending=[True, False, False]).reset_index(drop=True)
+        batt_df.loc[i, 'Storage_duration_name'] = s_dur_names[batt_df.loc[i, 'Storage duration']]
+    batt_df = batt_df.sort_values(by=['E', 'Storage duration', 'Time resolution'], ascending=[True, False, False]).reset_index(drop=True)
+
+    # Calculate lifetime
+    for i in range(len(batt_df)):
+        delta = relativedelta.relativedelta(datetime.strptime(
+            batt_df['Date of lifetime'][i], "%Y-%m-%d %H:%M:%S+00:00"),
+            start_date)
+        months = delta.years * 12 + delta.months + round(delta.days / 30)
+        batt_df.loc[i, 'Lifetime'] = months / 12
+
     return batt_df, SOC_profiles
-batt_df, SOC_profiles = set_up(results_folder, deg_results_folder, opt_results_folder, pattern)
+batt_df, SOC_profiles = set_up(results_folder, deg_results_folder, opt_results_folder, pattern, lifetime_percent)
 
 # Plotting the overall degradation heatmap, time vs size
 def plot_heatmap_deg_x_battery_size_y_time_resolutions(batt_df):
@@ -130,7 +136,7 @@ def plot_heatmap_deg_x_battery_size_y_time_resolutions(batt_df):
     vmin, vmax = newf.min().min(), newf.max().max()
 
     # Plot on heatmap
-    plt.figure(figsize=(14, 5))
+    plt.figure(figsize=(11, 4))
     size_time_htmp = sns.heatmap(newf,
                                  vmin=vmin,
                                  vmax=vmax,
@@ -180,75 +186,49 @@ def plot_heatmap_subplot(df, factor, axs_pos, colour, pivot_index='P', pivot_col
                     ax=axs_pos,
                     cmap=colour)
     axs_pos.set_title(title)
-def plot_heatmaps_factors_by_time(batt_df, factors, colours, nrows):
-    time_resolutions = batt_df['Time resolution'].unique()
-    v_mins_maxs = find_vmin_vmax(batt_df, factors)
 
-    for t in time_resolutions:
-        filtered_df = batt_df[batt_df['Time resolution'] == t]
-
-        # Set up subplots for correct number of factors
-        nrows, ncols, axs_indexes = make_subplot_dimensions(nrows, len(factors))
-        fig, axs = plt.subplots(nrows, ncols, figsize=(ncols*7, nrows*5))
-
-        for i in range(len(factors)):
-            plot_heatmap_subplot(df=filtered_df,
-                                 factor=factors[i],
-                                 axs_pos=axs[axs_indexes[i]],
-                                 colour=colours[factors[i]],
-                                 pivot_index='C-rate',           # Edited
-                                 pivot_columns='E',              # Edited
-                                 vmins_and_maxs=v_mins_maxs,
-                                 title=f"{factors[i]}")
-
-        # Set shared axis labels and title
-        fig.supxlabel('Battery Energy Capacity (MWh)')
-        fig.supylabel('Battery Power Capacity (MW)')
-        plt.suptitle(f'Time Resolution: {t} minutes')
-
-        plt.tight_layout()  # Adjust layout to make space for the main title #rect=[0, 0, 1, 0.95]
-        plt.show()
-def plot_heatmaps_times_by_factor(batt_df, factors, colours, nrows):
-    time_resolutions = batt_df['Time resolution'].unique()
+def plot_factor_heatmaps(separating_factor, x_axis_factor, y_axis_factor, batt_df, factors, colours, nrows=1):
+    separating_factors = batt_df[separating_factor].unique()
+    if separating_factor in factors:
+        factors.remove(separating_factor)
     v_mins_maxs = find_vmin_vmax(batt_df, factors)
 
     for f in range(len(factors)):
-        # Find vmin and vmax for shared colour bars
-
-
         # Set up subplots for correct number of time resolutions
-        nrows, ncols, axs_indexes = make_subplot_dimensions(nrows, len(time_resolutions))
+        nrows, ncols, axs_indexes = make_subplot_dimensions(nrows, len(separating_factors))
 
-        fig, axs = plt.subplots(nrows, ncols, figsize=(ncols * 7, nrows * 5))
+        fig, axs = plt.subplots(nrows, ncols, figsize=(ncols * 6, nrows * 4))
         # cbar_ax = fig.add_axes([.91, .3, .03, .4])
 
-        for i in range(len(time_resolutions)):
+        for i in range(len(separating_factors)):
             # Filter data for time resolution
-            time = time_resolutions[i]
-            filtered_df = batt_df[batt_df['Time resolution'] == time]
+            s_fact = separating_factors[i]
+            filtered_df = batt_df[batt_df[separating_factor] == s_fact]
 
             # Plot subplot
             plot_heatmap_subplot(df=filtered_df,
                                  factor=factors[f],
                                  axs_pos=axs[axs_indexes[i]],
                                  colour=colours[factors[f]],
-                                 pivot_index='C-rate',  # Edited
-                                 pivot_columns='E',  # Edited
+                                 pivot_index=y_axis_factor,  # Edited
+                                 pivot_columns=x_axis_factor,  # Edited
                                  vmins_and_maxs=v_mins_maxs,
-                                 title=f"Time: {time} minutes")
+                                 title=f"{separating_factor}: {s_fact:g}")
 
         # Set shared axis labels and title
-        fig.supxlabel('Battery Energy Capacity (MWh)')
-        fig.supylabel('Battery Power Capacity (MW)')
+        # fig.supxlabel('Storage_duration_name')
+        # fig.supylabel('T')
         plt.suptitle(f'{factors[f]}')
 
         plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make space for the main title
         save_dir = r'M:\Documents\PhD\Papers\EUPVSEC2024\Conference proceedings figures\Draft 2'
-        plt.savefig(f'{save_dir}\\x4_times_{factors[f]}.png')
+        plt.savefig(f'{save_dir}\\x4_{separating_factor}_{factors[f]}.png')
         plt.show()
-if factors_op != []:
-    plot_heatmaps_factors_by_time(batt_df, factors_op, colours, nrows=2)
-    plot_heatmaps_times_by_factor(batt_df, factors_op, colours, nrows=1)
+
+# Three heatmaps of E cap, x axis SD, y axis TR
+for key in desired_heatmaps.keys():
+    plot_factor_heatmaps(key, desired_heatmaps[key]['x'], desired_heatmaps[key]['y'], batt_df, factors, colours)
+
 
 # Update battery dataframe with number of cycles and average DoD
 def count_cycles(batt_df, SOC_profiles, cycle_binsize=0.1):
@@ -316,31 +296,6 @@ if SOC_limits_calculate:
     batt_df = count_SOC_limit_excedences(batt_df, SOC_profiles, SOC_count_limits=SOC_count_limits)
 
 
-def plot_cycles(cycle_data):
-    x_pos_t = {1:0, 5:1, 15:2, 30:3}
-    for (e, p) in set([(k[0],k[1]) for k in cycle_data.keys()]):
-        for t in set([(k[2]) for k in cycle_data.keys()]):
-            key = (e,p,t)
-            cyc_depth = cycle_data[key]['cyc_depth']
-            freq = cycle_data[key]['freq']
-            x_axis = np.arange(len(cyc_depth))
-            plt.bar((x_axis + (x_pos_t[t] * 0.2)), freq,
-                    label=f"Time: {t} minutes. Avg DOD: {round(cycle_data[key]['avg_DoD'], 3)}. No. cycles: {sum(freq)}", width=0.2)
-        plt.xticks(x_axis, ['%.2f' % elem for elem in cyc_depth])
-        plt.xlabel('Depth of discharge (relative to SOC)')
-        plt.ylabel('Frequency')
-        plt.legend()
-        plt.title(f'Battery size: {e:g}MWh, {p:g}MW')
-        save_dir = r'M:\Documents\PhD\Papers\EUPVSEC2024\Conference proceedings figures\Draft 2'
-        plt.savefig(f'{save_dir}\cycles_{e:g}MWh_{p:g}MW.png')
-        plt.show()
-if plot_cycle_data:
-    plot_cycles(cycle_data)
-
-if factors_deg != []:
-    plot_heatmaps_factors_by_time(batt_df, factors_deg, colours, nrows=2)
-    plot_heatmaps_times_by_factor(batt_df, factors_deg, colours, nrows=1)
-
 # Plotting the degradation bar chart with battery factor line graphs for each battery size
 def plot_battery_size_overview(batt_df, factors, colour):
     if 'Remaining cap' in factors:
@@ -351,7 +306,7 @@ def plot_battery_size_overview(batt_df, factors, colour):
         # Filter data for the current battery size
         size_df = batt_df[batt_df['Size labels'] == size]
 
-        fig, ax1 = plt.subplots(figsize=(12, 8))
+        fig, ax1 = plt.subplots(figsize=(11, 7))
 
         # Convert 'Time resolution' to categorical type for even spacing
         time_resolutions = [str(time) for time in list(size_df['Time resolution'].unique())]
@@ -384,93 +339,35 @@ def plot_battery_size_overview(batt_df, factors, colour):
         save_dir = r'M:\Documents\PhD\Papers\EUPVSEC2024\Conference proceedings figures\Draft 2'
         plt.savefig(f'{save_dir}\\{size[0]}_{size[1]}.png')
         plt.show()
-
-if factors_deg != []:
+if factors != []:
     if battery_plots:
-        plot_battery_size_overview(batt_df, factors_deg, colour)
+        plot_battery_size_overview(batt_df, factors, colour)
 
-
-def plot_heatmaps_Crates_by_factor(batt_df, factors, colours, nrows):
-    c_rates = batt_df['C-rate'].unique()
-    v_mins_maxs = find_vmin_vmax(batt_df, factors)
-
-    for f in range(len(factors)):
-        # Find vmin and vmax for shared colour bars
-
-
-        # Set up subplots for correct number of time resolutions
-        nrows, ncols, axs_indexes = make_subplot_dimensions(nrows, len(c_rates))
-
-        fig, axs = plt.subplots(nrows, ncols, figsize=(ncols * 7, nrows * 5))
-        # cbar_ax = fig.add_axes([.91, .3, .03, .4])
-
-        for i in range(len(c_rates)):
-            # Filter data for time resolution
-            c_rate = c_rates[i]
-            filtered_df = batt_df[batt_df['C-rate'] == c_rate]
-
-            # Plot subplot
-            plot_heatmap_subplot(df=filtered_df,
-                                 factor=factors[f],
-                                 axs_pos=axs[axs_indexes[i]],
-                                 colour=colours[factors[f]],
-                                 pivot_index='Time resolution',  # Edited
-                                 pivot_columns='E',  # Edited
-                                 vmins_and_maxs=v_mins_maxs,
-                                 title=f"C-rate: {c_rate:g}")
-
-        # Set shared axis labels and title
-        fig.supxlabel('Battery Energy Capacity (MWh)')
-        fig.supylabel('Battery Power Capacity (MW)')
-        plt.suptitle(f'{factors[f]}')
-
-        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make space for the main title
+def plot_cycles(cycle_data):
+    x_pos_t = {1:0, 5:1, 15:2, 30:3}
+    for (e, p) in set([(k[0],k[1]) for k in cycle_data.keys()]):
+        for t in set([(k[2]) for k in cycle_data.keys()]):
+            key = (e,p,t)
+            cyc_depth = cycle_data[key]['cyc_depth']
+            freq = cycle_data[key]['freq']
+            x_axis = np.arange(len(cyc_depth))
+            plt.bar((x_axis + (x_pos_t[t] * 0.2)), freq,
+                    label=f"Time: {t} minutes. Avg DOD: {round(cycle_data[key]['avg_DoD'], 3)}. No. cycles: {sum(freq)}", width=0.2)
+        plt.xticks(x_axis, ['%.2f' % elem for elem in cyc_depth])
+        plt.xlabel('Depth of discharge (relative to SOC)')
+        plt.ylabel('Frequency')
+        plt.legend()
+        plt.title(f'Battery size: {e:g}MWh, {p:g}MW')
         save_dir = r'M:\Documents\PhD\Papers\EUPVSEC2024\Conference proceedings figures\Draft 2'
-        plt.savefig(f'{save_dir}\\x4_c_rates_{factors[f]}.png')
+        plt.savefig(f'{save_dir}\cycles_{e:g}MWh_{p:g}MW.png')
         plt.show()
+if plot_cycle_data:
+    plot_cycles(cycle_data)
+def plot_lifetime_bar_chart(batt_df):
+    plt.bar(batt_df['Size labels'], batt_df['Lifetime'])
+    plt.show()
+plot_lifetime_bar_chart(batt_df)
 
-plot_heatmaps_Crates_by_factor(batt_df, factors_deg, colours, nrows=1)
-
-def plot_heatmaps_E_cap_by_factor(batt_df, factors, colours, nrows):
-    energies = batt_df['E'].unique()
-    v_mins_maxs = find_vmin_vmax(batt_df, factors)
-
-    for f in range(len(factors)):
-        # Find vmin and vmax for shared colour bars
-
-
-        # Set up subplots for correct number of time resolutions
-        nrows, ncols, axs_indexes = make_subplot_dimensions(nrows, len(energies))
-
-        fig, axs = plt.subplots(nrows, ncols, figsize=(ncols * 7, nrows * 5))
-        # cbar_ax = fig.add_axes([.91, .3, .03, .4])
-
-        for i in range(len(energies)):
-            # Filter data for time resolution
-            e_cap = energies[i]
-            filtered_df = batt_df[batt_df['E'] == e_cap]
-
-            # Plot subplot
-            plot_heatmap_subplot(df=filtered_df,
-                                 factor=factors[f],
-                                 axs_pos=axs[axs_indexes[i]],
-                                 colour=colours[factors[f]],
-                                 pivot_index='Time resolution',  # Edited
-                                 pivot_columns='C-rate',  # Edited
-                                 vmins_and_maxs=v_mins_maxs,
-                                 title=f"Energy capacity: {e_cap:g} MWh")
-
-        # Set shared axis labels and title
-        fig.supxlabel('C-rate_name')
-        # fig.supylabel('T')
-        plt.suptitle(f'{factors[f]}')
-
-        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust layout to make space for the main title
-        save_dir = r'M:\Documents\PhD\Papers\EUPVSEC2024\Conference proceedings figures\Draft 2'
-        plt.savefig(f'{save_dir}\\x4_Ecaps_{factors[f]}.png')
-        plt.show()
-
-plot_heatmaps_E_cap_by_factor(batt_df, factors_deg, colours, nrows=1)
 
 # Plot time series data of SOC profiles
 
