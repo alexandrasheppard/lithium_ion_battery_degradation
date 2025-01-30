@@ -210,7 +210,7 @@ def voltage_stress_model(soc, k_v=10.2):
     return stress
 
 
-def soc_stress_model(soc, k_soc=1.01e+00, s_ref=0.5):
+def soc_stress_model(soc, k_soc=1.04, s_ref=0.4):
     """
 
     :param soc: state of charge (between 0 and 1)

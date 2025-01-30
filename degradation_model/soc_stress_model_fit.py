@@ -31,7 +31,7 @@ from lmfit import minimize, Parameters, fit_report
 
 
 class SoCStressModelFit:
-    S_REF = 0.5  # this is the reference state of charge at which the SoH stress model is equal to 1
+    S_REF = 0.4  # this is the reference state of charge at which the SoH stress model is equal to 1
     colors = ['red', 'blue', 'green', 'orange', 'purple', 'black', 'grey', 'brown']
 
     def __init__(self, data_file_path, alpha_sei=5.87e-02, beta_sei=1.06e+02):

@@ -35,15 +35,15 @@ time1 = time.time()
 fig = plt.figure(figsize=(5, 4), dpi=100)
 ax1 = fig.add_subplot(111)
 
-temperature = 21
+temperature = 25
 chemistry = 'LMO'
-alpha_sei = 5.75e-02 # 5.87e-02
-beta_sei = 1.21e+02 # 1.06e+02
+alpha_sei = 5.87e-02 # 5.75e-02 #
+beta_sei = 1.06e+02 # 1.21e+02 #
 
 for m, fn in enumerate(os.listdir('input_data/')):
     if os.path.isfile(os.path.join('input_data/', str(fn))):
         filename, file_extension = os.path.splitext(fn)
-        print(f'Working with file {filename}')
+        print(f'Deg. est.: Working with file {fn}')
         if file_extension == '.csv':
             # If lasted al the way down to............
 
@@ -108,12 +108,13 @@ for m, fn in enumerate(os.listdir('input_data/')):
             nonlinear_deg_v.append(non_linear_deg)                 # Original
             # nonlinear_deg_v.append(linearised_deg)               # Waterfall chart, delete later
 
+        print(cyc_results)
         remaining_capa = []
 
         for i in range(0, len(nonlinear_deg_v)):
             remaining_capa.append(100*(1-nonlinear_deg_v[i]))
 
-        ax1.plot(time_linspace, remaining_capa, 'x-', label=filename) #color=colors[m],
+        ax1.plot(time_linspace, remaining_capa, 'x-', label=filename[1:]) #color=colors[m],
         ax1.set_xlabel('Time')
         ax1.set_ylabel('Remaining capacity [%]')
         # ax1.set_ylim([40, 100])
@@ -126,6 +127,7 @@ for m, fn in enumerate(os.listdir('input_data/')):
         write_out['Capacity_left'] = remaining_capa
         # write_out.to_csv(f'.\Results\{fn}.csv')           # Original
         write_out.to_csv(f'.\Results\\{fn}.csv')
+
 
 
 plt.show()

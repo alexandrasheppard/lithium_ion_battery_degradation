@@ -2,17 +2,17 @@ import os
 import re
 
 # Define the directory containing the files
-directory = r'M:\Documents\PhD\Code\PhD_Projects\IFE_degradation\Results\20240806140146\Matric_filling_july_10\Opt_model_results'  # Change this to the correct directory path if needed
+directory = r'M:\Documents\PhD\Code\PhD_Projects\IFE_degradation\Results\20241015142936\18_9_geo_smoothed\Opt_model_results'  # Change this to the correct directory path if needed
 
 # Define the pattern to match the filenames, allowing for decimals in Y
-pattern = re.compile(r'No_cal_deg_(\d+.?\d*)MWh_(\d+.?\d*)MW_(\d+T)_1.1_Results')
+pattern = re.compile(r'(\d+.?\d*)MWh_(\d+.?\d*)MW_(\d+T)_1.0_Results')
 
 # Iterate over the files in the directory
 count = 0
+files_changed_count = 0
 for filename in os.listdir(directory):
     # Full path to the current file
     file_path = os.path.join(directory, filename)
-    count += 1
     print(f'count = {count}')
     # Ensure it's a file
     if os.path.isfile(file_path):
@@ -32,5 +32,9 @@ for filename in os.listdir(directory):
             # Rename the file
             os.rename(file_path, new_file_path)
             print(f'Renamed: {filename} to {new_filename}')
+            files_changed_count += 1
+            print(f'Files changed count: {files_changed_count}')
         else:
-            print(f"No match for: {filename}")
+            print(f'No match found: {filename}')
+            print(f'Files changed count: {files_changed_count}')
+        count += 1
